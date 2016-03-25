@@ -62,7 +62,7 @@ def ur(t):
 ## choose SCHEME value in: {'EE' , 'EI' , 'CN', 'BDF2', 'EI-AMER-NEWTON','CN-AMER-NEWTON', 'BDF2-AMER-NEWTON', 'BDF3-AMER-NEWTON'}
 
 global SCHEME, CENTRAGE
-SCHEME = 'BDF2-AMER-NEWTON'
+SCHEME = 'EI-AMER-NEWTON'
 CENTRAGE = 'CENTRE'
 
 global alpha, bet, A, q, ft
@@ -238,43 +238,32 @@ def v_m2(t,x,s):
     return v
 
 ## Newton method
-def newton(B, b, g, x0, eps, kmax, type, Pold,f):
+def newton(B, b, g, x0, eps, kmax):
     k = 0
     x = np.copy(x0)
     err = eps + 1
     while (k < kmax and err > eps):
         k = k + 1
-        # Bon pour le schema BDF2 mais utiliser equation 11 pour CN !!
-        if type == 1:
-            F = np.fmin(np.dot(B, x) - b, x - g)
-            Fp = np.eye(len(B))
-            i = np.where((np.dot(B, x) - b) <=(x - g))
-            Fp[i, :] = B[i, :]
-            x = x - np.linalg.solve(Fp, F)
-            err = np.linalg.norm(np.fmin(np.dot(B, x) - b , x - g), np.inf)
-        else:
-            F = np.fmin(np.dot(B, x) - b, x - Pold)
-            Fp = np.eye(len(B))
-            i = np.where((np.dot(B, x) - b) <= (x - Pold))
-            Fp[i, :] = B[i, :]
-            x = x - np.linalg.solve(Fp, F)
-            err = np.linalg.norm(np.fmin(np.dot(B, x) - b, x - Pold),np.inf)
+        F = np.fmin(np.dot(B, x) - b, x - g)
+        Fp = np.eye(len(B))
+        i = np.where((np.dot(B, x) - b) <=(x - g))
+        Fp[i, :] = B[i, :]
+        x = x - np.linalg.solve(Fp, F)
+        err = np.linalg.norm(np.fmin(np.dot(B, x) - b , x - g), np.inf)
     return x
 
 
 def ei_amer_scheme(Id, dt, P, t, s, n, Pold,f):
     B = Id + dt * A
-    b = np.copy(P)-f
+    b = np.copy(P) - f
     x0 = np.copy(P)
-    g = payoff(s)+f
+    g = payoff(s) + f
     eps = (10) ** (-10)
     kmax = N + 1;
-    P = newton(B, b, g, x0, eps, kmax, 1, Pold,f);
+    P = newton(B, b, g, x0, eps, kmax);
     return P
 
-
-def cn_amer_scheme(Id, dt, P, t, s, n, Pold,f):
-    if n == 0: B = Id + (dt / 2) * A
+def cn1_amer_scheme(Id, dt, P, t, s, n, Pold, f):
     q0 = np.copy(qt(t))
     q1 = np.copy(qt(t + dt))
     b = np.dot(Id - (dt / 2) * A, P) - dt * (q0 + q1) / 2
@@ -283,11 +272,23 @@ def cn_amer_scheme(Id, dt, P, t, s, n, Pold,f):
     B = Id + (dt / 2) * A
     eps = 10**(-10)
     kmax = N + 1
-    P = newton(B, b, g, x0, eps, kmax, 2, P,f)
+    P = newton(B, b, g, x0, eps, kmax)
+    return P
+
+def cn2_amer_scheme(Id, dt, P, t, s, n, Pold, f):
+    q0 = np.copy(qt(t))
+    q1 = np.copy(qt(t + dt))
+    b = np.dot(Id - (dt / 2) * A, P) - dt * (q0 + q1) / 2
+    g = payoff(s)
+    x0 = np.copy(P)
+    B = Id + (dt / 2) * A
+    eps = 10**(-10)
+    kmax = N + 1
+    P = newton(B, b, P, x0, eps, kmax)
     return P
 
 
-def bdf3_amer_scheme(Id, dt, P, t, s, n, Pold, Pold2,f):
+def bdf3_amer_scheme(Id, dt, P, t, s, n, Pold, Pold2, f):
     q1 = np.copy( qt(t + dt) )
     b = 18 * P - 9 * Pold + 2 * Pold2 - (6 * dt / 3) * q1
     x0 = np.copy(P)
@@ -295,19 +296,19 @@ def bdf3_amer_scheme(Id, dt, P, t, s, n, Pold, Pold2,f):
     eps = 10 ** (-10)
     kmax = N + 1
     g = payoff(s)
-    P = newton(B, b, g, x0, eps, kmax, 1, Pold,f)
+    P = newton(B, b, g, x0, eps, kmax)
     return P
 
 
-def bdf2_amer_scheme(Id, dt, P, t, s, n, Pold,f):
+def bdf2_amer_scheme(Id, dt, P, t, s, n, Pold, f):
     q1 = np.copy( qt(t + dt) )
     b = 4 * P / 3 - Pold / 3 - (2 * dt / 3) * (q1 - f)
     x0 = np.copy(P)
     B = (Id + (2 * dt / 3) * A)
     eps = 10 ** (-10)
     kmax = N + 1
-    g = payoff(s) + f #*(2*dt)/3
-    P = newton(B, b, g, x0, eps, kmax, 1, Pold,f)
+    g = payoff(s) + f
+    P = newton(B, b, g, x0, eps, kmax)
     return P
 
 
@@ -350,13 +351,14 @@ def main():
     for n in range(0, int(N-1)):
         t = n * dt
         qt(t)
-        f_m2(t+dt,P,s)
+        f(t+dt,P,s)
         plt.figure(1)
         #plt.plot(s, ft)
         #plt.plot(s, P)
         switcher2 = {
             'EI-AMER-NEWTON': ei_amer_scheme(Id, dt, np.copy(P), t, s, n, Pold, ft),
-            'CN-AMER-NEWTON': cn_amer_scheme(Id, dt, np.copy(P), t, s, n, Pold, ft),
+            'CN1-AMER-NEWTON': cn1_amer_scheme(Id, dt, np.copy(P), t, s, n, Pold, ft),
+            'CN2-AMER-NEWTON': cn2_amer_scheme(Id, dt, np.copy(P), t, s, n, Pold, ft),
             'BDF2-AMER-NEWTON': bdf2_amer_scheme(Id, dt, np.copy(P), t, s, n, Pold, np.copy(ft)),
             'BDF3-AMER-NEWTON': bdf3_amer_scheme(Id, dt, np.copy(P), t, s, n, Pold, Pold2, ft)
         }
@@ -366,7 +368,7 @@ def main():
 #        plt.plot(s, P, label='Prix(t)')
 #        plt.show()
 
-    vt = v_m2(t,P,s)
+    vt = v(t,P,s)
     ref = np.zeros(len(P))
     for i in range(0, (len(s) - 1)): ref[i] = vt[i]
 
@@ -390,7 +392,7 @@ def main():
     #plt.ylim(0, 100)
     plt.plot(s, P, label='Scheme')
     plt.plot(s, vt, label='Sol explicite')
-    plt.plot(s, ft, label='deviation')
+    #plt.plot(s, ft, label='deviation')
 
     # plt.figure(1)
     # plt.plot(s,BS(T,s),label='Closed formula')
