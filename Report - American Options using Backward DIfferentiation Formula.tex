@@ -1,0 +1,254 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+
+\author{Jonathan Leblanc, Guillaume Pelletier}
+\title{American Options using Backward Differentiation Formula}
+
+\newcommand{\ninf}[1]{\left\| {#1} \right\|_\infty}
+\newcommand{\abs}[1]{\left\vert {#1} \right\vert}
+\newcommand{\reel}{\mathbb{R}}
+\newcommand{\atan}{\text{atan}}
+
+\begin{document}
+\maketitle
+\newpage
+
+\section{Introduction}
+
+The aim of this project is to use Backward Differentiation Formula (BDF) to solve non-linear diffusion equations with an obstacle term, in particular American-style options. We aim to reproduce numerical results from \cite{Boka} and \cite{Oosterlee}.
+
+We mainly focus on partial differential equation (PDE) with an obstacle term of the following form,
+\begin{align}
+	\min \left( u_t + \mathcal{A} u, u - \phi(x) \right) = 0,& \quad t \in (0,T), x \in \Omega, \label{eq-obstacle}\\
+	u(0, x) = u_0(x),& \quad x \in \Omega \label{eq-obstacle_initcond}
+\end{align}
+with $\mathcal{A}u := -\frac{1}{2} \sigma^2(t,x) u_{xx} + b(t,x) u_x + r(t,x) u$, and $\sigma$, $b$ and $r$ assumed to be regular functions.
+
+In this report, we first present BDF implicit schemes and examine stability results on an american-style put option. We revisit two types of Crank-Nicolson schemes to compare the stability of the schemes, especially for high CFL\footnote{See later. TO BE UPDATED} numbers.
+
+In section 2 we look at several numerical examples where we have explicit solutions. Compared to first section, we are abble to have finer study of the convergence near the singular region. Models examined are (\ref{eq-obstacle}), but we also have a look at one and two-dimensionnal problems based on Laplace operator.
+
+\section{Implicit BDF Obstacle Schemes}
+
+	\subsection{Backward Differentiation Formula}
+
+Our motivation for using BDF schemes is to unconditionally improve the consistency in time. We will see that with a particular treatment for the obstacle term, a Crank-Nicolson scheme yields second-order time consistency if the CFL condition holds. We aim do better and for that we analyse schemes up to step 3, that is BDF-2 and BDF-3, even though higher orders exist (up to 6).
+
+Let us consider a domain $\Omega = [X_{min}, X_{max}]$ and a uniform mesh with $J$ points inside, $x_j = X_{min} + jh$ for $j = 0, \dots, J+1$, where $h = \frac{X_{max} - X_{min}}{J+1}$. Moreover, $N \geq 1$ the time points in $[0,T]$, we define $t_n = n \tau$ for $n = 0, \dots N$, with $\tau = \frac{T}{N}$.
+
+We consider the obstacle problem (\ref{eq-obstacle}) complemented by boundary conditions of Dirichlet type, $\forall t \in (0,T)$
+\begin{align} 
+	u(t, X_{min}) = u_l(t), \label{eq-obstacle_ul}\\
+	u(t, X_{max}) = u_r(t). \label{eq-obstacle_ur}
+\end{align}
+Denoting by $u_j^n$ an approximation of $u(t_n, x_j)$, we use a centered finite difference aproximation for the operator $\mathcal{A} u$. When $\mathcal{A}$ does not depend on time -- which is the case for Black-Scholes' equation -- we have the approximation,
+\begin{align*}
+	(\mathcal{A} u)(t_n, x_j) &\simeq - \frac{\sigma^2(x_j)}{2} \left( \frac{u_{j+1}^n - 2u_j^n + u_{j-1}^n}{h^2} \right) + b(x_j) \frac{u_{j+1}^n - u_{j-1}^n}{2h} + r(x_j) u_j^n \\
+	& = \left( A u^n + q(t_n) \right)_j.
+\end{align*}
+The matrix $A$ is tridiagonal with $A = \text{tridiag} \left( -\alpha_j-\beta_j, 2\alpha_j + \gamma_j, -\alpha_j+\beta_j \right)$ where $\alpha_j = \frac{\sigma^2(x_j)}{2h^2}$, $\beta_j = \frac{b(x_j)}{2h}$, $\gamma_j = r(x_j)$, and $u^n = (u_1^n, \dots, u_J^n)^T$ and boundary conditions dealt by $q(t_n) = \left( -(\alpha_1+\beta_1) u_l(t_n), 0 \dots 0, (-\alpha_J+\beta_J) u_r(t_n) \right)^T$.
+
+We can now introduce the BDF-2 scheme for the obstacle equation (\ref{eq-obstacle}) as
+\begin{align}
+	\mathcal{S}_j^{n+1} (u) := \min\left( \frac{3 u_j^{n+1} - 4 u_j^n + u_j^{n-1}}{2 \tau} + (A u^{n+1} + q(t_{n+1}))_j, u_j^{n+1} - g_j \right) = 0 \label{eq-BDF2}
+\end{align}
+for $n=0,\dots,N$, $j=1,\dots,J$. We have denoted the obstacle value $g_j := \phi(x_j)$. Using Taylor's theorem, we demonstrate that the scheme is second order consistent in time (and space), and
+\begin{align*}
+	\mathcal{S}^{n+1} (v) = & \min (v_t + \mathcal{A}v, v-\phi)(t_{n+1}, x_j) \\ 
+		& \quad + O(\tau^2 \ninf{v_{3t}}) + O(h^2 (\ninf{v_{3x}} + \ninf{v_{4x}})),
+\end{align*}
+when $v$ is regular (see Appendix for proof). 
+
+Another equivalent way of writting the scheme (\ref{eq-BDF2}) is
+\begin{align}
+	\mathcal{S}^{n+1} (u) = \min\left( (I_d +\frac{3}{2} \tau A) u^{n+1} - \frac{4}{3} u^n + \frac{1}{3} u^{n-1} + \frac{2}{3} \tau q(t_{n+1})), u^{n+1} - g \right) = 0, \label{eq-BDF2_bis}
+\end{align}
+with $g = (g_1, \dots, g_J)^T$.
+
+Using the same arguments, we derive the BDF third order implicit obstacle scheme (BDF-3),
+\begin{align}
+	\mathcal{S}_j^{n+1} (u) := \min\bigg( &\frac{\frac{11}{6} u_j^{n+1} - 3 u_j^n + \frac{3}{2} u_j^{n-1} - \frac{1}{3} u_j^{n-2}}{\tau} \nonumber\\
+	& \quad + (A u^{n+1} + q(t_{n+1}))_j, u_j^{n+1} - g_j \bigg) = 0 \label{eq-BDF3}
+\end{align}
+for $n=0,\dots,N$, $j=1,\dots,J$, when $\mathcal{A}$ does not depend on time. As before, we have the equivalent scheme
+\begin{align}
+	\mathcal{S}^{n+1} (u) = \min\bigg( & (11 I_d + 6 \tau A) u^{n+1} - 18 u^n + 9 u^{n-1} \nonumber\\ 
+	& \quad - 2 u^{n-2} + 6 \tau q(t_{n+1})), u^{n+1} - g \bigg) = 0. \label{eq-BDF3_bis}
+\end{align}
+This time, Taylor's theorem give us a third order consistency in time (see Appendix for proof), thus for $v$ regular,
+\begin{align*}
+	\mathcal{S}^{n+1} (v) = & \min (v_t + \mathcal{A}v, v-\phi)(t_{n+1}, x_j) \\ 
+		& \quad + O(\tau^3 \ninf{v_{4t}}) + O(h^2 (\ninf{v_{3x}} + \ninf{v_{4x}})),
+\end{align*}
+
+To solve both non-linear schemes (\ref{eq-BDF2_bis}) and (\ref{eq-BDF3_bis}), we use a semi-smooth Newton's method. This algorithm is very efficient in solving obstacle problem of the form
+\begin{align}
+	\min (Bx - b, x-g) = 0, \quad x \in \reel^J. \label{eq-Newton}
+\end{align}
+As soon as $B$ is an $M$-matrix, it was shown in \cite{MR2551155}, that exact convergence happens in less that $(J+1)$ steps.
+
+	\subsection{Crank-Nicolson Schemes}
+
+We focus on BDF schemes, but in order to challenge consistency and stability results, we need another scheme as reference : we choose Crank-Nicolson schemes. On purpose, we give only brief descriptions and explanations, and refer to \cite{Boka} for more details and proofs.
+
+We give a first naive Crank-Nicolson (CN) scheme of the obstacle problem (\ref{eq-obstacle}),
+\begin{align}
+\mathcal{S}^{1,n} := \min \left( \frac{u^{n+1}-u^n}{\tau} + \frac{1}{2} (Au^{n+1} + Au^{n}) + q(t_{n+1/2}), u^{n+1} - \phi \right) = 0. \label{eq-CN1}
+\end{align}
+It is well known that CN schemes have second order consistency in time and space. However, the second order consistency happens only at times $t_{n+\frac{1}{2}}$, while the obstacle is evaluated at time $t_n$. Hence, scheme (\ref{eq-CN1}) is only one order consistent in time,
+\begin{align*}
+\mathcal{S}_j^{1,n} (v) = \min( v_t + \mathcal{A}v, v - \varphi) (t_{n+\frac{1}{2}}, x_j) + O(\tau + h^2).
+\end{align*}
+
+An ingenious way of overcomming this weak time consistency is to use the following equivalent formulation of the obstacle problem (\ref{eq-obstacle}),
+\begin{align}
+	min( -u_t + \mathcal{A}u, -u_t) &= 0 \; &t &\in (0,T), x \in \Omega, \label{eq-obstacle_reform}\\
+	u(0, x) &= u_0(x), \; & x &\in \Omega \nonumber.
+\end{align}
+Using a centered finite difference for $v_t$ in the obstacle term, the CN scheme for (\ref{eq-obstacle_reform}) is
+\begin{align}
+\mathcal{S}^{2,n} := \min \left( \frac{u^{n+1}-u^n}{\tau} + \frac{1}{2} (Au^{n+1} + Au^{n}) + q(t_{n+1/2}), u^{n+1} - u^{n} \right) = 0. \label{eq-CN2}
+\end{align}
+Unlike the naive CN scheme, the obstacle term of (\ref{eq-CN2}) is second order time consistent at time $t_{n+\frac{1}{2}}$, hence,
+\begin{align*}
+\mathcal{S}_j^{2,n} (v) = \min( v_t + \mathcal{A}v, v - \varphi) (t_{n+\frac{1}{2}}, x_j) + O(\tau^2 + h^2).
+\end{align*}
+
+		\subsection{Error Estimate for the BDF-2 Implicit Scheme}
+
+On étudiera aussi la preuve de la stabilité de la méthode [18].
+
+		\subsection{Stability American-Style Put Option}
+
+En particulier on tachera d’observer la convergence numérique d’ordre deux en temps et en espace, sans condition de type CFL dans le cas de BDF2.
+
+	\section{Numerical results}
+
+		\subsection{American-Style Put Option}
+
+When pricing american-style put options in the first part, we did not know about the exact solution and estimated the erreur using a proxy which was computed using a very dense mesh\footnote{N=??? and J=???} and a BDF-2 scheme. In this section, we wish to have a finer estimation of the erreur, with particular attention near the singular point.
+
+Let us consider the PDE of an american-style put option in the Black-Scholes model, and add a source term $f = f(t,x)$, thus 
+\begin{align}
+	\min \left( v_t - \frac{\lambda^2}{2} x^2 v_xx - r x v_x + r v, v - g(x) \right) = f(t,x), \label{eq-PDE_ameroption_source}
+\end{align} 
+with $g(x) := (K-x)^+$. It is well know that american-style put option price sticks to the payoff until a certain point $x_s(t) \in [0; K]$, with $x_s$ a decreasing function, and then gets strickly greater. Thus, we define
+\begin{align*}
+	x_s(t) := K - c_0 t,  \quad t \in [0,T]
+\end{align*}
+with $K-c_0T \in (0, K)$, and $X_{max}$, $0<K<X_{max}$, $c_0>0$ and $T>0$ given constants. So that the explicit functions $v(t,x)$ looks like a price, it must satisfy,
+\small{
+\begin{enumerate}
+	\item $v(t,x) = g(x)$ for $x \leq x_s(t)$,
+	\item $v(t,x) > g(x)$, for $x > x_s(t)$,
+	\item $v$ is at least $\mathcal{C}^1$ on $[0, X_{max}]$,
+	\item $v(t,X_{max}) = 0$.
+\end{enumerate}}
+
+Two functions $v$ are examined in \cite{Boka}, of which
+\begin{align}
+	v(t,x) = \left\lbrace \begin{array}{ll}
+	g(x), \quad & \forall x < x_s(t), \\
+	g(x_s(t)) - \frac{x - x_s(t)}{1 - (x - x_s(t))/C(t) }, \quad & \text{otherwise}.	
+	\end{array} \right. \label{eq-explicit_sol_ameroption1}
+\end{align}
+where $C(t,0)$ is defined as to meet condition 4, thus
+\begin{align*}
+	C(t) := \left( \frac{1}{X_{max} - x_s(t)} - \frac{1}{g(x_s(t))} \right)^{-1}.
+\end{align*}
+The second explicit function defined is
+\begin{align}
+	v(t,x) = \left\lbrace \begin{array}{ll}
+	g(x), \quad & \forall x < x_s(t), \\
+	g(x_s(t)) - C(t) \atan \left( \frac{x - x_s(t)}{C(t)} \right), \quad & \text{otherwise}.	
+	\end{array} \right. \label{eq-explicit_sol_ameroption2}
+\end{align}
+where $C(t,0)$ is defined\footnote{see \cite{Boka} for details on the two fixed-point methods used to compute $C(t)$} as to satisfy condition 4.
+
+To solve (\ref{eq-PDE_ameroption_source}) with source function computed with (\ref{eq-explicit_sol_ameroption1}) or (\ref{eq-explicit_sol_ameroption2}), we use the semi-smooth Newton method. The algorithm solve very efficiently $\min (Bx - b, x-g) = 0$, thus with BDF-2 scheme on (\ref{eq-explicit_sol_ameroption1}) we end up with
+\begin{align*}
+	B &= I_d + \frac{2 \tau}{3} A, \\
+	b &= \frac{4}{3} U^n - \frac{1}{3} U^{n-1} - \frac{2}{3} \tau q_{n+1} + \frac{2}{3} \tau f_{n+1} \\
+	g &= g - f_{n+1}.
+\end{align*}
+
+		\subsection{Model problem based on Laplace Operator}
+
+As in \cite{Oosterlee}, we consider the optimisation problem modelling elasto-plastic torsion of a cylindrical bar in a model region $\Omega = (-1,1) \times (-1,1)$. We added a partial derivation with respect to $t$ to test the BDF scheme, thus for all $t \in [0,T]$,
+\begin{equation}
+\label{eq-Laplace}
+\begin{aligned}
+	v_t + v_{ss} + v_{yy} &\leq C, & \quad x &\in \Omega, \\
+	v &\leq d(x, \partial \Omega), & \quad x &\in \Omega, \\
+	(v-d(x,\partial \Omega))(v_{ss} + v_{yy} - 2C) &= 0, \quad & x &\in \Omega, \\
+	\text{with boudary cond.} \; v &= 0, \quad & x &\in \partial \Omega,
+\end{aligned}
+\end{equation}
+where the $d(x, \partial \Omega)$-operator measures the distance from the grid point $x = (s,y)$ to the domain boundary $\partial \Omega$.
+
+Just like for the american-style put option, we do not know about the exact solutions, and add a source term to construct explicit solutions. Moreover, we start by solving the problem in 1-dimension, thus (\ref{eq-Laplace}) reduces to
+\begin{equation}
+\label{eq-Laplace_1d}
+\begin{aligned}
+	\max(v_t + v_{ss} - C, v - d(x, \partial \Omega)) &= f(t,x), & \quad x &\in \Omega, \\
+	\text{with boudary cond.} \; v &= 0, \quad & x &\in \partial \Omega.
+\end{aligned}
+\end{equation}
+and $\Omega = [0,1]$.
+We define $x_l(t) := -c_0 t$, $x_r(t) := c_0 t$ with $c_0 T < 1$, and $c_0>0$, $T>0$ fixed constants. The explicit solution $v$ must satisfy, for all $t \in [0,T]$,
+\small{
+\begin{enumerate}
+	\item $v(t,x) = d(x, \partial \Omega)$ for $x \in [-1, x_l(t)) \cap (x_r(t), 1]$,
+	\item $v(t,x) < d(x, \partial \Omega)$, for $x < x_s(t)$,
+	\item $v$ is at least $\mathcal{C}^1$ on $[-1, 1]$,
+	\item $v(t,-1) = v(t,1) = 0$.
+\end{enumerate}}
+From all these conditions, we derive the following parabola
+\begin{align}
+	v(t,x) = \left\lbrace \begin{array}{ll}
+	d(x, \partial \Omega), \quad & \forall x \in [-1, x_l(t)) \cap (x_r(t), 1], \\
+	d(x_r(t), \partial \Omega) + \frac{x_r(t)}{2} - \frac{x^2}{2 x_r(t)}, \quad & \text{otherwise}.	
+	\end{array} \right. \label{eq-explicit_sol_ameroption2}
+\end{align}
+
+We fit a BDF-2 approximation for the first derivative $v_t$ and a centered finite difference aproximation for the second derivative $v_{ss}$. This leads us to the scheme
+\begin{align*}
+	S^{n+1}(u) := \max \bigg( &(I_d +\frac{2\tau}{3} A) u^{n+1} - \frac{4}{3} u^n + \frac{1}{3} u^{n-1} + \frac{2\tau}{3} (q_{n+1} - C - f^{n+1}), \\
+	& \quad u^{n+1} - D - f^{n+1} \bigg) = 0
+\end{align*} 
+where $D = (d(x_1, \partial \Omega), \dots, d(x_J, \partial \Omega))^T$, $f^{n+1} = (f(t^{n+1},x_1), \dots, f(t^{n+1},x_J))^T$, $A = \text{tridiag} \left( \frac{1}{h^2},-\frac{2}{h^2},\frac{1}{h^2} \right)$, $q_{n+1} = \left( \frac{1}{h^2} x_l(t_{n+1}), 0 \dots 0, \frac{1}{h^2} x_r(t_{n+1}) \right)^T$ and $J$ the number of space points inside the mesh. This equation is solved using the usual\footnote{Notice the right-hand-side in the $\min$ is slightly different than the algorithm used in previous sections.} semi-smooth Newton's method for $\min(Bx - b, g - x) = 0$.
+
+
+%%---------------- APPENDIX ----------------%%
+\newpage
+\section{Appendix}
+
+	\subsection{Proofs of section 1}
+	
+		\subsubsection{Consistency of BDF-2}
+
+Using Taylor's theorem we have the following inequalities,
+\begin{align*}
+\abs{ \frac{u_{j+1}^{n+1}-u_{j-1}^{n+1}}{2h} - u_x(t_{n+1},x_j) } \leq \frac{h^2}{9} \ninf{u_{3x}}, \\
+\abs{ \frac{u_{j+1}^{n+1}-2u_{j}^{n+1}+u_{j-1}^{n+1}}{2h} - u_{xx}(t_{n+1},x_j) } \leq \frac{h^2}{12} \ninf{u_{4x}}, \\
+\abs{ \frac{3u_{j}^{n+1} - 4u_{j}^{n} + u_{j}^{n-1}}{2 \tau} - u_t(t_{n+1},x_j) } \leq \frac{2 \tau^2}{3} \ninf{u_{3t}},
+\end{align*}
+and since the obstacle term is at $t_{n+1}$ in (\ref{eq-BDF2}), the scheme is second order consistent in time and space.
+
+		\subsubsection{Consistency of BDF-3}
+
+The result is straighforward from the proof of the consistency of BDF-2 and the additionnal inequality obtained using Taylor's theorem,
+\begin{align*}
+\abs{ \frac{\frac{11}{6} u_j^{n+1} - 3 u_j^n + \frac{3}{2} u_j^{n-1} - \frac{1}{3} u_j^{n-2}}{\tau} - u_t(t_{n+1},x_j) } \leq \frac{\tau^3}{4} \ninf{u_{4t}}.
+\end{align*}
+
+
+
+\newpage
+\bibliographystyle{plain}
+\bibliography{biblio}
+
+\end{document}
