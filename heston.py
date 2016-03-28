@@ -84,7 +84,7 @@ def centred(s, y):
     for k in range(0, int(K)):
         for j in range(0, int(I)):
             Ak[j, j] = -gamma**2 * y[k] / (2 * h_y**2) + (alpha * (beta + y[k])) / (2 * h_y)
-            Bk[j, j] = s[j]**2 * y[k] / (h_s**2) + gamma**2 * y[k] / (2 * h_y**2) + r
+            Bk[j, j] = s[j]**2 * y[k] / (h_s**2) + gamma**2 * y[k] / (h_y**2) + r
             Ck[j, j] = -gamma**2 * y[k] / (2 * h_y**2) - (alpha * (beta + y[k])) / (2 * h_y)
             A[k*K + j, k*K + j] = Bk[j, j]
             if (k>0): A[k*K + j, (k-1)*K + j] = Ak[j, j]
@@ -128,7 +128,7 @@ def qt(t, s, y):
     C_KU = np.dot(C_K, u_ymax(t, s)) # could use boundary conditions with discount factor
 
     q = np.zeros(I * K)
-    """
+
     for j in range(0, int(I)):
         q[j] = A_1U[j]
         q[(K-1)*I + j] = C_KU[j]
@@ -137,7 +137,7 @@ def qt(t, s, y):
         b_k = -s[0]**2 * y[k] / (2 * h_s**2) + r * s[0] / h_s
         c_k = rho * gamma * y[k] * s[0] / (4 * h_s * h_y)
         q[k*I] = q[k*I] + (a_k + b_k + c_k) * u_smin(t, Smin)
-    """
+
     return q
 
 
@@ -191,9 +191,10 @@ def main():
 
     y1_show = 0.0625
     y2_show = 0.25
+    y3_show = 0.5
     idx1 = int(y1_show/h_y)
     idx2 = int(y2_show/h_y)
-
+    idx3 = int(y3_show/h_y)
     # CFL numbers
 #    cfl = ((dt / (h_s ** 2)) * (sigma * Smax) ** 2) / 2
 #    print 'Notre condition CFL {!r}.'.format(cfl)
@@ -228,8 +229,8 @@ def main():
         Pold = np.copy(P)  ##Attention
         P = switcher2.get(SCHEME, "SCHEME not programmed")
 
-        plt.plot(s, P[(idx1*I):((idx1+1)*I)], label='Scheme (y=0.25)')
-        plt.legend()
+##        plt.plot(s, P[(idx1*I):((idx1+1)*I)], label='Scheme (y=0.25)')
+##        plt.legend()
 
     """
     vt = v(t,P,s)
@@ -258,6 +259,7 @@ def main():
 
     plt.plot(s, P[(idx1*I):((idx1+1)*I)], label='Scheme (y=0.0625)')
     plt.plot(s, P[(idx2*I):((idx2+1)*I)], label='Scheme (y=0.25)')
+    plt.plot(s, P[(idx3*I):((idx3+1)*I)], label='Scheme (y=0.5)')
 
     #plt.plot(s, ft, label='deviation')
 
