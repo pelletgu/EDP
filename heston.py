@@ -28,8 +28,8 @@ rho = 0.1
 ##Numerical data
 global N, I, K
 N = 40.;
-I = 32.;
-K = 32.;
+I = 39.;
+K = 39.;
 
 ##Payoff function
 
@@ -103,6 +103,7 @@ def centred(s, y):
             A[k*K + j, k*K + j+1] = Bk[j, j+1]
             if (k>0): A[k*K + j, (k-1)*K + j+1] = Ak[j,j+1]
             if (k<(int(I)-1)): A[(k*K + j, (k+1)*K + j+1)] = Ck[j, j+1]
+            else: A[k*K + j, k*K + j+1] = Bk[j, j+1] + Ck[j, j+1] # condition de Neumann pour Ymax
 
 ##Vector of bound conditions
 
@@ -131,7 +132,8 @@ def qt(t, s, y):
 
     for j in range(0, int(I)):
         q[j] = A_1U[j]
-        q[(K-1)*I + j] = C_KU[j]
+        #q[(K-1)*I + j] = C_KU[j] # on enleve la condition de Dirichlet pour Ymax
+
     for k in range(0, int(K)):
         a_k = -rho * gamma * y[k] * s[0] / (4 * h_s * h_y)
         b_k = -s[0]**2 * y[k] / (2 * h_s**2) + r * s[0] / h_s
@@ -155,8 +157,8 @@ def newton(B, b, g, x0, eps, kmax, s):
         x = x - np.linalg.solve(Fp, F)
         err = np.linalg.norm(np.fmin(np.dot(B, x) - b , x - g), np.inf)
 
-        #plt.plot(s, x[0:32], label='Scheme (y=0.25)')
-        #plt.legend()
+        #txt = "Scheme (k=" + str(k) + ")"
+        #plt.plot(s, x[992:1024], label=txt )
         #plt.show()
     return x
 
@@ -189,12 +191,6 @@ def main():
     s = Smin + np.transpose(np.linspace(1, I, I)) * h_s
     y = Ymin + np.transpose(np.linspace(1, K, K)) * h_y
 
-    y1_show = 0.0625
-    y2_show = 0.25
-    y3_show = 0.5
-    idx1 = int(y1_show/h_y)
-    idx2 = int(y2_show/h_y)
-    idx3 = int(y3_show/h_y)
     # CFL numbers
 #    cfl = ((dt / (h_s ** 2)) * (sigma * Smax) ** 2) / 2
 #    print 'Notre condition CFL {!r}.'.format(cfl)
@@ -257,14 +253,21 @@ def main():
     #plt.xlim(0, 200)
     #plt.ylim(0, 100)
 
-    plt.plot(s, P[(idx1*I):((idx1+1)*I)], label='Scheme (y=0.0625)')
-    plt.plot(s, P[(idx2*I):((idx2+1)*I)], label='Scheme (y=0.25)')
-    plt.plot(s, P[(idx3*I):((idx3+1)*I)], label='Scheme (y=0.5)')
-
     #plt.plot(s, ft, label='deviation')
 
     # plt.figure(1)
     # plt.plot(s,BS(T,s),label='Closed formula')
+
+    y_plot = np.array([0.0625, 0.25, 0.5])
+    s_plot = np.array([8, 9, 10, 11, 12], int)
+    for k in range(0, len(y_plot)):
+        idx_y = (int)(y_plot[k]/h_y)
+        txt = "Scheme (y=" + str(idx_y*h_y) + ")"
+        plt.plot(s, P[(idx_y*I):(idx_y+1)*I], label=txt)
+        print "### y=" + str(y_plot[k])
+        for j in range(0, len(s_plot)):
+            idx_s = (int)(s_plot[j]/h_s)
+            print "P(S=" + str(idx_s*h_s) + ")=" + str(P[idx_y*I+idx_s])
     plt.legend()
     plt.show()
 
