@@ -27,9 +27,9 @@ rho = 0.1
 
 ##Numerical data
 global N, I, K
-N = 40.;
-I = 39.;
-K = 39.;
+N = 30.;
+I = 49.;
+K = 31.;
 
 ##Payoff function
 
@@ -41,19 +41,11 @@ def payoff(s):
 
 def u_ymin(t, s):
     ## return K*exp(-r*t)-Smin in case of European option
-    payoff = np.fmax(E - s, 0)
-    return payoff
+    return np.fmax(E - s, 0) * np.exp(-r*t)
 
-def u_ymax(t, s):
+def u_smin(t):
     ## return K*exp(-r*t)-Smin in case of European option
-    return np.ones(I)*E #*np.exp(-r*t)
-
-def u_smin(t, s):
-    ## return K*exp(-r*t)-Smin in case of European option
-    return E - s
-
-def u_smax(t, s):
-    return 0
+    return E*np.exp(-r*t) - Smin
 
 
 ## choose SCHEME value in: {'EE' , 'EI' , 'CN', 'BDF2', 'EI-AMER-NEWTON','CN-AMER-NEWTON', 'BDF2-AMER-NEWTON', 'BDF3-AMER-NEWTON'}
@@ -74,11 +66,11 @@ def centred(s, y):
     A = np.zeros(I**2 * K**2)
     A = A.reshape((I * K, I * K))
 
-    Ak = np.zeros(I * I)
+    Ak = np.zeros(I**2)
     Ak = Ak.reshape((I, I))
-    Bk = np.zeros(I ** 2)
+    Bk = np.zeros(I**2)
     Bk = Bk.reshape((I , I))
-    Ck = np.zeros(I ** 2)
+    Ck = np.zeros(I**2)
     Ck = Ck.reshape((I , I))
 
     for k in range(0, int(K)):
@@ -86,24 +78,35 @@ def centred(s, y):
             Ak[j, j] = -gamma**2 * y[k] / (2 * h_y**2) + (alpha * (beta + y[k])) / (2 * h_y)
             Bk[j, j] = s[j]**2 * y[k] / (h_s**2) + gamma**2 * y[k] / (h_y**2) + r
             Ck[j, j] = -gamma**2 * y[k] / (2 * h_y**2) - (alpha * (beta + y[k])) / (2 * h_y)
-            A[k*K + j, k*K + j] = Bk[j, j]
-            if (k>0): A[k*K + j, (k-1)*K + j] = Ak[j, j]
-            if (k<(int(I)-1)): A[(k*K + j, (k+1)*K + j)] = Ck[j, j]
+
+            # Conditions de Neumann pour Smax
+            if (j == int(I)-1):
+                Ak[j, j] += rho * gamma * y[k] * s[int(I)-1] / (4 * h_s * h_y)
+                Bk[j, j] += - s[int(I)-1]**2 * y[k] / (2 * h_s**2) - r * s[int(I)-1] / h_s
+                Ck[j, j] += - rho * gamma * y[k] * s[int(I)-1] / (4 * h_s * h_y)
+
+            A[k*I + j, k*I + j] = Bk[j, j]
+            if (k>0): A[k*I + j, (k-1)*I + j] = Ak[j, j]
+            if (k<(int(K)-1)): A[(k*I + j, (k+1)*I + j)] = Ck[j, j]
+            else: A[k*I + j, k*I + j] += Ck[j, j] # condition de Neumann pour Ymax
         for j in range(1, int(I)):
             Ak[j, j-1] = -rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
             Bk[j, j-1] = -s[j]**2 * y[k] / (2 * h_s**2) + r * s[j] / h_s
             Ck[j, j-1] = rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
-            A[k*K + j, k*K + j-1] = Bk[j, j-1]
-            if (k>0): A[k*K + j, (k-1)*K + j-1] = Ak[j, j-1]
-            if (k<(int(I)-1)): A[(k*K + j, (k+1)*K + j-1)] = Ck[j, j-1]
+
+            A[k*I + j, k*I + j-1] = Bk[j, j-1]
+            if (k>0): A[k*I + j, (k-1)*I + j-1] = Ak[j, j-1]
+            if (k<(int(K)-1)): A[(k*I + j, (k+1)*I + j-1)] = Ck[j, j-1]
+            else: A[k*I + j, k*I + j-1] += Ck[j, j-1] # condition de Neumann pour Ymax
         for j in range(0, int(I-1)):
             Ak[j, j+1] = rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
             Bk[j, j+1] = -s[j]**2 * y[k] / (2 * h_s**2) - r * s[j] / h_s
             Ck[j, j+1] = -rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
-            A[k*K + j, k*K + j+1] = Bk[j, j+1]
-            if (k>0): A[k*K + j, (k-1)*K + j+1] = Ak[j,j+1]
-            if (k<(int(I)-1)): A[(k*K + j, (k+1)*K + j+1)] = Ck[j, j+1]
-            else: A[k*K + j, k*K + j+1] = Bk[j, j+1] + Ck[j, j+1] # condition de Neumann pour Ymax
+
+            A[k*I + j, k*I + j+1] = Bk[j, j+1]
+            if (k>0): A[k*I + j, (k-1)*I + j+1] = Ak[j,j+1]
+            if (k<(int(K)-1)): A[(k*I + j, (k+1)*I + j+1)] = Ck[j, j+1]
+            else: A[k*I + j, k*I + j+1] += Ck[j, j+1] # condition de Neumann pour Ymax
 
 ##Vector of bound conditions
 
@@ -113,32 +116,26 @@ def qt(t, s, y):
     h_y = (Ymax - Ymin) / (K + 1)
 
     A_1 = np.zeros(I ** 2)
-    A_1 = A_1.reshape((I , I ))
+    A_1 = A_1.reshape((I, I))
     C_K = np.zeros(I ** 2)
-    C_K = C_K.reshape((I , I ))
+    C_K = C_K.reshape((I, I))
     for j in range(0, int(I)):
         A_1[j, j] = -gamma**2 * y[0] / (2 * h_y**2) + (alpha * (beta + y[0])) / (2 * h_y)
-        C_K[j, j] = -gamma**2 * y[K-1] / (2 * h_y**2) - (alpha * (beta + y[K-1])) / (2 * h_y)
     for j in range(1, int(I)):
         A_1[j, j-1] = -rho * gamma * y[0] * s[j] / (4 * h_s * h_y)
-        C_K[j, j-1] = rho * gamma * y[K-1] * s[j] / (4 * h_s * h_y)
     for j in range(0, int(I-1)):
         A_1[j, j+1] = rho * gamma * y[0] * s[j] / (4 * h_s * h_y)
-        C_K[j, j+1] = -rho * gamma * y[K-1] * s[j] / (4 * h_s * h_y)
-    A_1U = np.dot(A_1, u_ymin(t, s)) # could use boundary conditions with discount factor
-    C_KU = np.dot(C_K, u_ymax(t, s)) # could use boundary conditions with discount factor
+    A_1U = np.dot(A_1, u_ymin(t, s))
+    A_1U[0] += -rho * gamma * y[0] * Smin / (4 * h_s * h_y) * u_smin(t)# Dirichlet condition for Smin
 
     q = np.zeros(I * K)
-
     for j in range(0, int(I)):
         q[j] = A_1U[j]
-        #q[(K-1)*I + j] = C_KU[j] # on enleve la condition de Dirichlet pour Ymax
-
     for k in range(0, int(K)):
         a_k = -rho * gamma * y[k] * s[0] / (4 * h_s * h_y)
         b_k = -s[0]**2 * y[k] / (2 * h_s**2) + r * s[0] / h_s
         c_k = rho * gamma * y[k] * s[0] / (4 * h_s * h_y)
-        q[k*I] = q[k*I] + (a_k + b_k + c_k) * u_smin(t, Smin)
+        q[k*I] += (a_k + b_k + c_k) * u_smin(t)
 
     return q
 
@@ -204,9 +201,6 @@ def main():
         Pold[(k*I):((k+1)*I)] = payoff(s)
         P[(k*I):((k+1)*I)] = payoff(s)
 
-    plt.figure(1)
-    plt.plot(s, payoff(s), label='payoff')
-
     switcher = {
         'CENTRE': centred(s, y),
     }
@@ -250,6 +244,7 @@ def main():
     print time.time() - start_time
 
     plt.figure(1)
+    plt.axis([5,15,0,5])
     #plt.xlim(0, 200)
     #plt.ylim(0, 100)
 
@@ -258,16 +253,19 @@ def main():
     # plt.figure(1)
     # plt.plot(s,BS(T,s),label='Closed formula')
 
-    y_plot = np.array([0.0625, 0.25, 0.5])
+    plt.figure(1)
+    plt.plot(s, payoff(s), label='payoff')
+
+    y_plot = np.array([0.025, 0.0625, 0.25, 0.601, 0.701, 0.80, 0.90 ,0.975])
     s_plot = np.array([8, 9, 10, 11, 12], int)
     for k in range(0, len(y_plot)):
-        idx_y = (int)(y_plot[k]/h_y)
+        idx_y = np.fmax((int)(y_plot[k]/h_y), 1)
         txt = "Scheme (y=" + str(idx_y*h_y) + ")"
-        plt.plot(s, P[(idx_y*I):(idx_y+1)*I], label=txt)
-        print "### y=" + str(y_plot[k])
+        plt.plot(s, P[((idx_y-1)*I):idx_y*I], label=txt)
+        print "### y=" + str(idx_y*h_y)
         for j in range(0, len(s_plot)):
-            idx_s = (int)(s_plot[j]/h_s)
-            print "P(S=" + str(idx_s*h_s) + ")=" + str(P[idx_y*I+idx_s])
+            idx_s = np.fmax((int)(s_plot[j]/h_s), 1)
+            print "P(S=" + str(idx_s*h_s) + ")=" + str(P[(idx_y-1)*I+idx_s-1])
     plt.legend()
     plt.show()
 
