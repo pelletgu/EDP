@@ -11,6 +11,9 @@
 \newcommand{\abs}[1]{\left\vert {#1} \right\vert}
 \newcommand{\reel}{\mathbb{R}}
 \newcommand{\atan}{\text{atan}}
+\newcommand{\pd}[2]{\frac{\partial {#1}}{\partial {#2}}}
+\newcommand{\pdd}[2]{\frac{\partial^2 {#1}}{\partial {#2}^2}}
+\newcommand{\pdc}[3]{\frac{\partial^2 {#1}}{\partial {#2} \partial {#3}}}
 
 \begin{document}
 \maketitle
@@ -37,7 +40,7 @@ In section 2 we look at several numerical examples where we have explicit soluti
 
 Our motivation for using BDF schemes is to unconditionally improve the consistency in time. We will see that with a particular treatment for the obstacle term, a Crank-Nicolson scheme yields second-order time consistency if the CFL condition holds. We aim do better and for that we analyse schemes up to step 3, that is BDF-2 and BDF-3, even though higher orders exist (up to 6).
 
-Let us consider a domain $\Omega = [X_{min}, X_{max}]$ and a uniform mesh with $J$ points inside, $x_j = X_{min} + jh$ for $j = 0, \dots, J+1$, where $h = \frac{X_{max} - X_{min}}{J+1}$. Moreover, $N \geq 1$ the time points in $[0,T]$, we define $t_n = n \tau$ for $n = 0, \dots N$, with $\tau = \frac{T}{N}$.
+Let us consider a domain $\Omega = [X_{min}, X_{max}]$ and a uniform mesh with $J$ points inside, $x_j = X_{min} + jh$ for $j = 0, \dots, J+1$, where $h = \frac{X_{max} - X_{min}}{J+1}$. Moreover, $N \geq 1$ the number of time points in $[0,T]$, we define $t_n = n \tau$ for $n = 0, \dots N$, with $\tau = \frac{T}{N}$.
 
 We consider the obstacle problem (\ref{eq-obstacle}) complemented by boundary conditions of Dirichlet type, $\forall t \in (0,T)$
 \begin{align} 
@@ -105,7 +108,7 @@ It is well known that CN schemes have second order consistency in time and space
 
 An ingenious way of overcomming this weak time consistency is to use the following equivalent formulation of the obstacle problem (\ref{eq-obstacle}),
 \begin{align}
-	min( -u_t + \mathcal{A}u, -u_t) &= 0 \; &t &\in (0,T), x \in \Omega, \label{eq-obstacle_reform}\\
+	\min( -u_t + \mathcal{A}u, -u_t) &= 0 \; &t &\in (0,T), x \in \Omega, \label{eq-obstacle_reform}\\
 	u(0, x) &= u_0(x), \; & x &\in \Omega \nonumber.
 \end{align}
 Using a centered finite difference for $v_t$ in the obstacle term, the CN scheme for (\ref{eq-obstacle_reform}) is
@@ -140,13 +143,14 @@ with $g(x) := (K-x)^+$. It is well know that american-style put option price sti
 	x_s(t) := K - c_0 t,  \quad t \in [0,T]
 \end{align*}
 with $K-c_0T \in (0, K)$, and $X_{max}$, $0<K<X_{max}$, $c_0>0$ and $T>0$ given constants. So that the explicit functions $v(t,x)$ looks like a price, it must satisfy,
-\small{
+\begin{small}
 \begin{enumerate}
 	\item $v(t,x) = g(x)$ for $x \leq x_s(t)$,
 	\item $v(t,x) > g(x)$, for $x > x_s(t)$,
 	\item $v$ is at least $\mathcal{C}^1$ on $[0, X_{max}]$,
 	\item $v(t,X_{max}) = 0$.
-\end{enumerate}}
+\end{enumerate}
+\end{small}
 
 Two functions $v$ are examined in \cite{Boka}, of which
 \begin{align}
@@ -199,13 +203,15 @@ Just like for the american-style put option, we do not know about the exact solu
 \end{equation}
 and $\Omega = [0,1]$.
 We define $x_l(t) := -c_0 t$, $x_r(t) := c_0 t$ with $c_0 T < 1$, and $c_0>0$, $T>0$ fixed constants. The explicit solution $v$ must satisfy, for all $t \in [0,T]$,
-\small{
+\begin{small}
 \begin{enumerate}
 	\item $v(t,x) = d(x, \partial \Omega)$ for $x \in [-1, x_l(t)) \cap (x_r(t), 1]$,
 	\item $v(t,x) < d(x, \partial \Omega)$, for $x < x_s(t)$,
 	\item $v$ is at least $\mathcal{C}^1$ on $[-1, 1]$,
 	\item $v(t,-1) = v(t,1) = 0$.
-\end{enumerate}}
+\end{enumerate}
+\end{small}
+
 From all these conditions, we derive the following parabola
 \begin{align}
 	v(t,x) = \left\lbrace \begin{array}{ll}
@@ -221,6 +227,113 @@ We fit a BDF-2 approximation for the first derivative $v_t$ and a centered finit
 \end{align*} 
 where $D = (d(x_1, \partial \Omega), \dots, d(x_J, \partial \Omega))^T$, $f^{n+1} = (f(t^{n+1},x_1), \dots, f(t^{n+1},x_J))^T$, $A = \text{tridiag} \left( \frac{1}{h^2},-\frac{2}{h^2},\frac{1}{h^2} \right)$, $q_{n+1} = \left( \frac{1}{h^2} x_l(t_{n+1}), 0 \dots 0, \frac{1}{h^2} x_r(t_{n+1}) \right)^T$ and $J$ the number of space points inside the mesh. This equation is solved using the usual\footnote{Notice the right-hand-side in the $\min$ is slightly different than the algorithm used in previous sections.} semi-smooth Newton's method for $\min(Bx - b, g - x) = 0$.
 
+		\subsection{Heston Stochastic Volatility Model}
+
+	In previous sections, we priced american-style put option in the classic Black-Scholes model. Now, we consider the volatility to be stochastic using the Heston model. Let $(S_t)_{t \in [0,T]}$ the asset price and $(Y_t)_{t \in [0,T]}$ its variance process be defined by,
+\begin{align}
+	\frac{dS_t}{S_t} &= \mu dt + \sqrt{Y_t} dW^1_t, \\
+	\frac{dY_t}{Y_t} &= \alpha (\beta - y) dt + \gamma dW^2_t,
+\end{align}
+where $W^1$, $W^2$ represent standard Brownian motion with correlation $\rho \in [-1, 1]$. The process $(Y_t)_{t \in [0,T]}$ is positive (provided that $\gamma^2 \leq 2 \alpha \beta$), mean-reverting with mean $\beta$ and rate governed by $\alpha$, and has volatility $\gamma$. 
+
+Under this model, one can derive the following PDE for the value $u=u(x,y,t)$ of an option,
+\begin{align}
+	Lu := \pd{u}{t} - \mathcal{A}u = 0, \quad u(x,y,T) = g(x)\label{eq-EDPHeston}
+\end{align}
+where,
+\begin{align}
+	\mathcal{A}u = \frac{1}{2} \left( S_t^2 Y_t \pdd{u}{x} + 2 \rho \gamma Y_t S_t \pdc{u}{x}{y}+ \gamma^2 y \pdd{u}{y} \right) + r S_t \pd{u}{x} + \alpha (\beta - Y_t) \pd{u}{y} - ru, \label{eq-A_Heston}
+\end{align}
+and $g$ the payoff function.
+We refer to \cite{Oosterlee,MR1628686} for the argument leading to (\ref{eq-EDPHeston}). For the put option, $g(x) = (E-x)^+$ and we use the same boudary conditions as \cite{Oosterlee}, that is Dirichlet conditions for $X_{min}=0$ and $Y_{min}=0$ of the form
+\begin{equation}\label{eq-Heston_Dirichlet}
+\begin{aligned}
+	u(0, y, t) &= E e^{-r(T-t)}, \quad &\forall y &\geq 0, t \in [0,T], \\
+	u(x, 0, t) &= (E-x)^+ e^{-r(T-t)}, \quad &\forall x &\geq 0, t \in [0,T], \\	
+\end{aligned}
+\end{equation}
+with Neumann conditions at $S_{max}$ and $X_{max}$,
+\begin{equation}\label{eq-Heston_Neumann}
+\begin{aligned}
+	\pd{u}{x}(X_{max}, y, t) &= 0, \quad &\forall y &\in [0,Y_{max}], t \in [0,T], \\
+	\pd{u}{y}(x, Y_{max}, t) &= 0, \quad &\forall x &\in [0,X_{max}], t \in [0,T]. \\	
+\end{aligned}
+\end{equation}
+
+As for the Black-Scholes model, one can derive the formulation for american-style put option,
+\begin{equation} \label{eq-HestonObstacle}
+\begin{aligned}
+	\min \left( \pd{u}{t} + \mathcal{A}u, u - g(x) \right) &= 0, \\
+	u(x, y, 0) &= g(x)
+\end{aligned}
+\end{equation}
+with boundary conditions (\ref{eq-Heston_Dirichlet}) and (\ref{eq-Heston_Neumann}).
+
+Let us consider a domain $\Omega = [X_{min}, X_{max}] \times [Y_{min}, Y_{max}]$ and a uniform mesh with $J$ points inside for $x$ and $K$ for $y$. We define $x_j = X_{min} + jh_x$ for $j = 0, \dots, J+1$, where $h_x = \frac{X_{max} - X_{min}}{J+1}$, and likewise $y_k = X_{min} + kh_y$ for $k = 0, \dots, K+1$, where $h_x = \frac{Y_{max} - Y_{min}}{K+1}$. Moreover, $N \geq 1$ the number of time points in $[0,T]$, we define $t_n = n \tau$ for $n = 0, \dots N$, with $\tau = \frac{T}{N}$.
+
+Denoting $u_{j,k}^n$ an approximation of $u(x_j,y_k,t_n)$, we consider a centered finite difference approximation for the operator $\mathcal{A}u$ 
+\begin{footnotesize}
+\begin{align*}
+	&(\mathcal{A}u)(x_j,y_k,t_n) \simeq \\
+	&-\frac{1}{2} \bigg( x_j^2 y_k \frac{u_{j+1,k}^n - 2u_{j,k}^n + u_{j-1,k}^n}{h_x^2} 
+	 +2 \rho \gamma y_k x_j \frac{u_{j+1,k+1}^n - u_{j+1,k-1}^n - u_{j-1,k+1}^n + u_{j-1,k-1}^n}{4 h_x h_y} \\ 
+	&+ \gamma^2 y_k \frac{u_{j,k+1}^n - 2 u_{j,k}^n + u_{j,k-1}^n}{h_y^2} \bigg) - r x_j \frac{u_{j+1,k}^n-u_{j-1,k}^n}{h_x} - \alpha (\beta + y_k) \frac{u_{j,k+1}^n - u_{j,k-1}^n}{2 h_x} + ru_{j,k}^n
+\end{align*}
+\end{footnotesize}
+and a BDF-2 approximation for the first derivative $u_t$. Let us denote by $A u^n + q(t_n)$ the approximation of $\mathcal{A}u(.,.,t_n)$ on a given set of grid points, with $u^n = (u_{\bullet,1}^n,\dots,u_{\bullet,K}^n)^T$ and $u_{\bullet,k}^n = (u_{1,k}^n,\dots,u_{J,k}^n)^T$ and with given Dirichlet boudary conditions,
+\begin{align*}
+u_{0,k}^n = E e^{-r t_n}, \quad u_{j,0}^n = (E-x_j)^+ e^{-r t_n}, \quad k=1,\dots,K, \; j=1,\dots J.
+\end{align*}
+The matrix $A$ is defined by,
+\begin{align*}
+A = \begin{pmatrix}
+   B_1 & C_1 & 0 & \hdots & 0 \\
+   A_2 & B_2 & C_2 & & \vdots \\
+   0 & \ddots & \ddots & \ddots & 0 \\
+   \vdots & & A_{K-1} & B _{K-1} & C_{K-1} \\
+   0 & \cdots & 0 & A_K & B_K + C_K
+\end{pmatrix}
+\end{align*}
+where for all $k = 1, \dots, K$,
+\begin{align*}
+	A_k	&= \text{tridiag} \left( \frac{-\rho \gamma y_k x_j}{4 h_x h_y}, \frac{-\gamma^2 y_k}{2 h_y^2} + \frac{\alpha (\beta + y_k)}{2 h_y}, \frac{\rho \gamma y_k x_j}{4 h_x h_y} \right)_{j=1,\dots,J} + p^A_k, \\
+	B_k &= \text{tridiag} \left( \frac{-x_j^2 y_k}{2h_x} + \frac{r x_j}{h_x}, \frac{x_j^2 y_k}{h_x^2} + \frac{\gamma^2 y_k}{h_y^2} + r, \frac{-s_j^2 y_k}{2 h_x^2} - \frac{r x_j}{h_x} \right)_{j=1,\dots,J} + p^B_k, \\
+	C_k &= \text{tridiag} \left( \frac{\rho \gamma y_k x_j}{4 h_x h_y}, \frac{-\gamma^2 y_k}{2 h_y^2} - \frac{\alpha (\beta + y_k)}{2 h_y}, \frac{-\rho \gamma y_k x_j}{4 h_x h_y} \right)_{j=1,\dots,J} + p^C_k,
+\end{align*}
+and $p^A_k$, $p^B_k$, $p^C_k$ empty $(J \times J)$ matrices with last row defined by $(0,\dots,0,\frac{\rho \gamma y_k x_J}{4 h_x h_y})$, $(0,\dots,0,\frac{-s_J^2 y_k}{2 h_x^2} - \frac{r x_J}{h_x})$ and $(0,\dots,0,\frac{-\rho \gamma y_k x_J}{4 h_x h_y})$ (for Neumann boundary conditions on $X_{max}$). Finally, the Dirichlet boundary conditions are managed by
+\begin{align*}
+q(t_n) = 
+\begin{pmatrix}
+	A_1 u_{\bullet, 0}^n \\
+	0 \\
+	\vdots \\
+	0
+\end{pmatrix} +
+\begin{pmatrix}
+\begin{pmatrix}
+		\left( \frac{-\rho \gamma y_1 x_1}{4 h_x h_y} + \frac{-x_1^2 y_1}{2h_x} + \frac{r x_1}{h_x} + \frac{\rho \gamma y_1 x_1}{4 h_x h_y} \right) u_{0,1}^n \\
+		0 \\
+		\vdots
+\end{pmatrix} \\
+\vdots \\ 
+\begin{pmatrix}
+		\left( \frac{-\rho \gamma y_K x_1}{4 h_x h_y} + \frac{-x_1^2 y_K}{2h_x} + \frac{r x_1}{h_x} + \frac{\rho \gamma y_K x_1}{4 h_x h_y} \right) u_{0,K}^n \\
+		0 \\
+		\vdots
+\end{pmatrix}
+\end{pmatrix}.
+\end{align*}
+
+Using the same arguments as for (\ref{eq-BDF2_bis}), we derive the BDF-2 scheme for the obstacle problem (\ref{eq-HestonObstacle}),
+\begin{align*}
+	\min\left( (I_d +\frac{3}{2} \tau A) u^{n+1} - \frac{4}{3} u^n + \frac{1}{3} u^{n-1} + \frac{2}{3} \tau q(t_{n+1})), u^{n+1} - g \right) = 0,
+\end{align*}
+with $g = (g(u_{\bullet,1}),\dots,g(u_{\bullet,K}))^T$. The unknown $u^{n+1}$ is solved using a semi-smooth Newton algorithm briefly defined at (\ref{eq-Newton}).
+
+For numerical results, we considered the same parameters as \cite{Oosterlee}, therefore
+\begin{align*}
+	\alpha = 5, \: \beta = 0.16, \: \gamma = 0.9, \: \rho = 0.1, \: \lambda = 0, \: r = 0.1, \: E = 10.
+\end{align*}
 
 %%---------------- APPENDIX ----------------%%
 \newpage
