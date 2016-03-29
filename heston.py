@@ -91,7 +91,7 @@ def centred(s, y):
             else: A[k*I + j, k*I + j] += Ck[j, j] # condition de Neumann pour Ymax
         for j in range(1, int(I)):
             Ak[j, j-1] = -rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
-            Bk[j, j-1] = -s[j]**2 * y[k] / (2 * h_s**2) + r * s[j] / h_s
+            Bk[j, j-1] = -s[j]**2 * y[k] / (2 * h_s**2) + r * s[j] / (2*h_s)
             Ck[j, j-1] = rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
 
             A[k*I + j, k*I + j-1] = Bk[j, j-1]
@@ -100,7 +100,7 @@ def centred(s, y):
             else: A[k*I + j, k*I + j-1] += Ck[j, j-1] # condition de Neumann pour Ymax
         for j in range(0, int(I-1)):
             Ak[j, j+1] = rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
-            Bk[j, j+1] = -s[j]**2 * y[k] / (2 * h_s**2) - r * s[j] / h_s
+            Bk[j, j+1] = -s[j]**2 * y[k] / (2 * h_s**2) - r * s[j] / (2*h_s)
             Ck[j, j+1] = -rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
 
             A[k*I + j, k*I + j+1] = Bk[j, j+1]

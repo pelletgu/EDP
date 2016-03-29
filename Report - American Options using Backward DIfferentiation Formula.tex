@@ -3,6 +3,7 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amssymb}
+\usepackage{color}
 
 \author{Jonathan Leblanc, Guillaume Pelletier}
 \title{American Options using Backward Differentiation Formula}
@@ -277,7 +278,7 @@ Denoting $u_{j,k}^n$ an approximation of $u(x_j,y_k,t_n)$, we consider a centere
 	&(\mathcal{A}u)(x_j,y_k,t_n) \simeq \\
 	&-\frac{1}{2} \bigg( x_j^2 y_k \frac{u_{j+1,k}^n - 2u_{j,k}^n + u_{j-1,k}^n}{h_x^2} 
 	 +2 \rho \gamma y_k x_j \frac{u_{j+1,k+1}^n - u_{j+1,k-1}^n - u_{j-1,k+1}^n + u_{j-1,k-1}^n}{4 h_x h_y} \\ 
-	&+ \gamma^2 y_k \frac{u_{j,k+1}^n - 2 u_{j,k}^n + u_{j,k-1}^n}{h_y^2} \bigg) - r x_j \frac{u_{j+1,k}^n-u_{j-1,k}^n}{h_x} - \alpha (\beta + y_k) \frac{u_{j,k+1}^n - u_{j,k-1}^n}{2 h_x} + ru_{j,k}^n
+	&+ \gamma^2 y_k \frac{u_{j,k+1}^n - 2 u_{j,k}^n + u_{j,k-1}^n}{h_y^2} \bigg) - r x_j \frac{u_{j+1,k}^n-u_{j-1,k}^n}{\textcolor{red}{2}h_x} - \alpha (\beta + y_k) \frac{u_{j,k+1}^n - u_{j,k-1}^n}{2 h_\color{red}y} + ru_{j,k}^n
 \end{align*}
 \end{footnotesize}
 and a BDF-2 approximation for the first derivative $u_t$. Let us denote by $A u^n + q(t_n)$ the approximation of $\mathcal{A}u(.,.,t_n)$ on a given set of grid points, with $u^n = (u_{\bullet,1}^n,\dots,u_{\bullet,K}^n)^T$ and $u_{\bullet,k}^n = (u_{1,k}^n,\dots,u_{J,k}^n)^T$ and with given Dirichlet boudary conditions,
@@ -297,7 +298,7 @@ A = \begin{pmatrix}
 where for all $k = 1, \dots, K$,
 \begin{align*}
 	A_k	&= \text{tridiag} \left( \frac{-\rho \gamma y_k x_j}{4 h_x h_y}, \frac{-\gamma^2 y_k}{2 h_y^2} + \frac{\alpha (\beta + y_k)}{2 h_y}, \frac{\rho \gamma y_k x_j}{4 h_x h_y} \right)_{j=1,\dots,J} + p^A_k, \\
-	B_k &= \text{tridiag} \left( \frac{-x_j^2 y_k}{2h_x} + \frac{r x_j}{h_x}, \frac{x_j^2 y_k}{h_x^2} + \frac{\gamma^2 y_k}{h_y^2} + r, \frac{-s_j^2 y_k}{2 h_x^2} - \frac{r x_j}{h_x} \right)_{j=1,\dots,J} + p^B_k, \\
+	B_k &= \text{tridiag} \left( \frac{-x_j^2 y_k}{2h_x} + \frac{r x_j}{\textcolor{red}{2}h_x}, \frac{x_j^2 y_k}{h_x^2} + \frac{\gamma^2 y_k}{h_y^2} + r, \frac{-s_j^2 y_k}{2 h_x^2} - \frac{r x_j}{\textcolor{red}{2}h_x} \right)_{j=1,\dots,J} + p^B_k, \\
 	C_k &= \text{tridiag} \left( \frac{\rho \gamma y_k x_j}{4 h_x h_y}, \frac{-\gamma^2 y_k}{2 h_y^2} - \frac{\alpha (\beta + y_k)}{2 h_y}, \frac{-\rho \gamma y_k x_j}{4 h_x h_y} \right)_{j=1,\dots,J} + p^C_k,
 \end{align*}
 and $p^A_k$, $p^B_k$, $p^C_k$ empty $(J \times J)$ matrices with last row defined by $(0,\dots,0,\frac{\rho \gamma y_k x_J}{4 h_x h_y})$, $(0,\dots,0,\frac{-s_J^2 y_k}{2 h_x^2} - \frac{r x_J}{h_x})$ and $(0,\dots,0,\frac{-\rho \gamma y_k x_J}{4 h_x h_y})$ (for Neumann boundary conditions on $X_{max}$). Finally, the Dirichlet boundary conditions are managed by
