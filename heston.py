@@ -28,7 +28,7 @@ rho = 0.1
 ##Numerical data
 global N, I, K
 N = 30.;
-I = 49.;
+I = 255.;
 K = 31.;
 
 ##Payoff function
@@ -75,9 +75,9 @@ def centred(s, y):
 
     for k in range(0, int(K)):
         for j in range(0, int(I)):
-            Ak[j, j] = -gamma**2 * y[k] / (2 * h_y**2) + (alpha * (beta + y[k])) / (2 * h_y)
+            Ak[j, j] = -gamma**2 * y[k] / (2 * h_y**2) + (alpha * (beta - y[k])) / (2 * h_y)
             Bk[j, j] = s[j]**2 * y[k] / (h_s**2) + gamma**2 * y[k] / (h_y**2) + r
-            Ck[j, j] = -gamma**2 * y[k] / (2 * h_y**2) - (alpha * (beta + y[k])) / (2 * h_y)
+            Ck[j, j] = -gamma**2 * y[k] / (2 * h_y**2) - (alpha * (beta - y[k])) / (2 * h_y)
 
             # Conditions de Neumann pour Smax
             if (j == int(I)-1):
@@ -120,7 +120,7 @@ def qt(t, s, y):
     C_K = np.zeros(I ** 2)
     C_K = C_K.reshape((I, I))
     for j in range(0, int(I)):
-        A_1[j, j] = -gamma**2 * y[0] / (2 * h_y**2) + (alpha * (beta + y[0])) / (2 * h_y)
+        A_1[j, j] = -gamma**2 * y[0] / (2 * h_y**2) + (alpha * (beta - y[0])) / (2 * h_y)
     for j in range(1, int(I)):
         A_1[j, j-1] = -rho * gamma * y[0] * s[j] / (4 * h_s * h_y)
     for j in range(0, int(I-1)):
