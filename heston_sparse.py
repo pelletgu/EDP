@@ -1,5 +1,7 @@
 import numpy as np
+from scipy import sparse
 from scipy.sparse import csr_matrix
+from scipy.sparse import dia_matrix
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 import time
@@ -29,7 +31,7 @@ rho = 0.1
 ##Numerical data
 global N, I, K
 N = 30.;
-I = 49.;
+I = 255.;
 K = 31.;
 
 ##Payoff function
@@ -61,12 +63,13 @@ global A, q
 ##Define the generator of the scheme and the A matrix (same for each scheme as the focus is on the t de
 
 def Ak_f(s, y, k):
-    Ak = csr_matrix(I)
+    Ak = np.zeros(I**2)
+    Ak = Ak.reshape((I, I))
     h_s = (Smax - Smin) / (I + 1)
     h_y = (Ymax - Ymin) / (K + 1)
 
     for j in range(0, int(I)):
-        Ak[j, j] = -gamma**2 * y[k] / (2 * h_y**2) + (alpha * (beta + y[k])) / (2 * h_y)
+        Ak[j, j] = -gamma**2 * y[k] / (2 * h_y**2) + (alpha * (beta - y[k])) / (2 * h_y)
         # add pkA for Neumann boundary conditions on Smax
         if (j == int(I)-1):
             Ak[j, j] += rho * gamma * y[k] * s[int(I)-1] / (4 * h_s * h_y)
@@ -75,10 +78,11 @@ def Ak_f(s, y, k):
     for j in range(0, int(I-1)):
         Ak[j, j+1] = rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
 
-    return Ak
+    return (Ak)
 
 def Bk_f(s, y, k):
-    Bk = csr_matrix(I, I)
+    Bk = np.zeros(I**2)
+    Bk = Bk.reshape((I, I))
     h_s = (Smax - Smin) / (I + 1)
     h_y = (Ymax - Ymin) / (K + 1)
 
@@ -86,21 +90,22 @@ def Bk_f(s, y, k):
         Bk[j, j] = s[j]**2 * y[k] / (h_s**2) + gamma**2 * y[k] / (h_y**2) + r
         # add pkB for Neumann boundary conditions on Smax
         if (j == int(I)-1):
-            Bk[j, j] += - s[int(I)-1]**2 * y[k] / (2 * h_s**2) - r * s[int(I)-1] / h_s
+            Bk[j, j] += - s[int(I)-1]**2 * y[k] / (2 * h_s**2) - r * s[int(I)-1] / (2 * h_s)
     for j in range(1, int(I)):
-        Bk[j, j-1] = -s[j]**2 * y[k] / (2 * h_s**2) + r * s[j] / h_s
+        Bk[j, j-1] = -s[j]**2 * y[k] / (2 * h_s**2) + r * s[j] / (2 * h_s)
     for j in range(0, int(I-1)):
-        Bk[j, j+1] = -s[j]**2 * y[k] / (2 * h_s**2) - r * s[j] / h_s
+        Bk[j, j+1] = -s[j]**2 * y[k] / (2 * h_s**2) - r * s[j] / (2 * h_s)
 
-    return Bk
+    return (Bk)
 
 def Ck_f(s, y, k):
-    Ck = csr_matrix(I, I)
+    Ck = np.zeros(I**2)
+    Ck = Ck.reshape((I, I))
     h_s = (Smax - Smin) / (I + 1)
     h_y = (Ymax - Ymin) / (K + 1)
 
     for j in range(0, int(I)):
-        Ck[j, j] = -gamma**2 * y[k] / (2 * h_y**2) - (alpha * (beta + y[k])) / (2 * h_y)
+        Ck[j, j] = -gamma**2 * y[k] / (2 * h_y**2) - (alpha * (beta - y[k])) / (2 * h_y)
         # add pkB for Neumann boundary conditions on Smax
         if (j == int(I)-1):
             Ck[j, j] += - rho * gamma * y[k] * s[int(I)-1] / (4 * h_s * h_y)
@@ -109,18 +114,19 @@ def Ck_f(s, y, k):
     for j in range(0, int(I-1)):
         Ck[j, j+1] = -rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
 
-    return Ck
+    return (Ck)
 
 def centred(s, y):
     global A
     h_s = (Smax - Smin) / (I + 1)
     h_y = (Ymax - Ymin) / (K + 1)
-    A = csr_matrix(I**2 * K**2)
+    A = np.zeros(I**2 * K**2)
+    A = A.reshape((I * K, I * K))
 
     for k in range(0, int(K)):
         Ak = Ak_f(s, y, k)
-        Bk = Ak_f(s, y, k)
-        Ck = Ak_f(s, y, k)
+        Bk = Bk_f(s, y, k)
+        Ck = Ck_f(s, y, k)
 
         for j in range(0, int(I)):
             A[k*I + j, k*I + j] = Bk[j, j]
@@ -128,23 +134,17 @@ def centred(s, y):
             if (k<(int(K)-1)): A[(k*I + j, (k+1)*I + j)] = Ck[j, j]
             else: A[k*I + j, k*I + j] += Ck[j, j] # add CK to BK for Neumann boundary conditions on Ymax
         for j in range(1, int(I)):
-            Ak[j, j-1] = -rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
-            Bk[j, j-1] = -s[j]**2 * y[k] / (2 * h_s**2) + r * s[j] / h_s
-            Ck[j, j-1] = rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
-
             A[k*I + j, k*I + j-1] = Bk[j, j-1]
             if (k>0): A[k*I + j, (k-1)*I + j-1] = Ak[j, j-1]
             if (k<(int(K)-1)): A[(k*I + j, (k+1)*I + j-1)] = Ck[j, j-1]
             else: A[k*I + j, k*I + j-1] += Ck[j, j-1]# add CK to BK for Neumann boundary conditions on Ymax
         for j in range(0, int(I-1)):
-            Ak[j, j+1] = rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
-            Bk[j, j+1] = -s[j]**2 * y[k] / (2 * h_s**2) - r * s[j] / h_s
-            Ck[j, j+1] = -rho * gamma * y[k] * s[j] / (4 * h_s * h_y)
-
             A[k*I + j, k*I + j+1] = Bk[j, j+1]
             if (k>0): A[k*I + j, (k-1)*I + j+1] = Ak[j,j+1]
             if (k<(int(K)-1)): A[(k*I + j, (k+1)*I + j+1)] = Ck[j, j+1]
             else: A[k*I + j, k*I + j+1] += Ck[j, j+1] # add CK to BK for Neumann boundary conditions on Ymax
+
+    A = dia_matrix(A)
 
 ##Vector of bound conditions
 
@@ -156,7 +156,7 @@ def qt(t, s, y):
     A_1 = np.zeros(I ** 2)
     A_1 = A_1.reshape((I, I))
     for j in range(0, int(I)):
-        A_1[j, j] = -gamma**2 * y[0] / (2 * h_y**2) + (alpha * (beta + y[0])) / (2 * h_y)
+        A_1[j, j] = -gamma**2 * y[0] / (2 * h_y**2) + (alpha * (beta - y[0])) / (2 * h_y)
     for j in range(1, int(I)):
         A_1[j, j-1] = -rho * gamma * y[0] * s[j] / (4 * h_s * h_y)
     for j in range(0, int(I-1)):
@@ -169,7 +169,7 @@ def qt(t, s, y):
         q[j] = A_1U[j]
     for k in range(0, int(K)):
         a_k = -rho * gamma * y[k] * s[0] / (4 * h_s * h_y)
-        b_k = -s[0]**2 * y[k] / (2 * h_s**2) + r * s[0] / h_s
+        b_k = -s[0]**2 * y[k] / (2 * h_s**2) + r * s[0] / (2 * h_s)
         c_k = rho * gamma * y[k] * s[0] / (4 * h_s * h_y)
         q[k*I] += (a_k + b_k + c_k) * u_smin(t)
 
@@ -179,15 +179,31 @@ def qt(t, s, y):
 def newton(B, b, g, x0, eps, kmax, s):
     k = 0
     x = np.copy(x0)
+    x1 = np.copy(x0)
     err = eps + 1
+    B1 = np.copy(B.toarray())
     while (k < kmax and err > eps):
         k = k + 1
-        F = np.fmin(np.dot(B.toarray(), x) - b, x - g)
-        Fp = np.eye(len(B))
-        i = np.where((np.dot(B, x) - b) <=(x - g))
-        Fp[i, :] = B[i, :]
-        x = x - np.linalg.solve(Fp, F)
-        err = np.linalg.norm(np.fmin(np.dot(B.toarray(), x) - b , x - g), np.inf)
+        F = np.fmin(B.dot(x) - b, x - g)
+        Fp = csr_matrix(B, copy=True)
+
+        """
+        #############
+        F1 = np.fmin(np.dot(B1, x1) - b, x1 - g)
+        Fp1 = np.eye(len(B1))
+        i1 = np.where((np.dot(B1, x1) - b) <= (x1 - g))
+        Fp1[i1, :] = B1[i1, :]
+        x1 = x1 - np.linalg.solve(Fp1, F1)
+        #############
+        """
+
+        i = np.where((B.dot(x) - b) > (x - g))
+        for i_row in i[0][:]:
+            csr_row_set_nz_to_val(Fp, i_row) # set row to identity
+        x = x - sparse.linalg.spsolve(Fp, F)
+        #x = x - np.linalg.solve(Fp, F)
+        err = np.linalg.norm(np.fmin(B.dot(x) - b , x - g), np.inf)
+        err1 = np.linalg.norm(np.fmin(np.dot(B1, x1) - b, x1 - g), np.inf)
 
         #txt = "Scheme (k=" + str(k) + ")"
         #plt.plot(s, x[992:1024], label=txt )
@@ -210,6 +226,16 @@ def bdf2_amer_scheme(Id, dt, P, t, s, y, Pold):
     P = newton(B, b, g, x0, eps, kmax, s)
     return P
 
+
+def csr_row_set_nz_to_val(csr, row):
+    """Set all nonzero elements (elements currently in the sparsity pattern)
+    to the given value. Useful to set to 0 mostly.
+    """
+    if not isinstance(csr, sparse.csr_matrix):
+        raise ValueError('Matrix given must be of CSR format.')
+    csr.data[csr.indptr[row]:csr.indptr[row+1]] = 0
+    idxdiag = np.where(csr.indices[csr.indptr[row]:csr.indptr[row+1]] == row)[0][0] + csr.indptr[row]
+    csr.data[idxdiag] = 1
 
 ##Start of the real program
 
@@ -243,11 +269,10 @@ def main():
     }
     switcher.get(CENTRAGE, "CENTRAGE not programmed")
 
-    Id = np.eye(len(A))
+    Id = sparse.eye(I*K)
     for n in range(0, int(N-1)):
         t = n * dt
         qt(t, s, y)
-        plt.figure(1)
         switcher2 = {
             'BDF2-AMER-NEWTON': bdf2_amer_scheme(Id, dt, np.copy(P), t, s, y, Pold),
         }
@@ -256,8 +281,9 @@ def main():
         Pold = np.copy(P)  ##Attention
         P = switcher2.get(SCHEME, "SCHEME not programmed")
 
-##        plt.plot(s, P[(idx1*I):((idx1+1)*I)], label='Scheme (y=0.25)')
-##        plt.legend()
+        #plt.figure(1)
+        #plt.plot(s, P[(idx1*I):((idx1+1)*I)], label='Scheme (y=0.25)')
+        #plt.legend()
 
     """
     vt = v(t,P,s)
@@ -291,13 +317,13 @@ def main():
     # plt.plot(s,BS(T,s),label='Closed formula')
 
     plt.figure(1)
-    plt.plot(s, payoff(s), label='payoff')
+    plt.plot(s, payoff(s), label='Payoff')
 
-    y_plot = np.array([0.025, 0.0625, 0.25, 0.601, 0.701, 0.80, 0.90 ,0.975])
+    y_plot = np.array([0.0625, 0.25])
     s_plot = np.array([8, 9, 10, 11, 12], int)
     for k in range(0, len(y_plot)):
         idx_y = np.fmax((int)(y_plot[k]/h_y), 1)
-        txt = "Scheme (y=" + str(idx_y*h_y) + ")"
+        txt = "BDF-2 Scheme (y=" + str(idx_y*h_y) + ")"
         plt.plot(s, P[((idx_y-1)*I):idx_y*I], label=txt)
         print "### y=" + str(idx_y*h_y)
         for j in range(0, len(s_plot)):
@@ -309,3 +335,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
