@@ -11,7 +11,7 @@
 
 
 \author{Jonathan Leblanc, Guillaume Pelletier}
-\title{American Options using Backward Differentiation Formula}
+\title{American-Style Options using Backward Differentiation Formula}
 
 \newcommand{\ninf}[1]{\left\| {#1} \right\|_\infty}
 \newcommand{\abs}[1]{\left\vert {#1} \right\vert}
@@ -235,7 +235,7 @@ where $D = (d(x_1, \partial \Omega), \dots, d(x_J, \partial \Omega))^T$, $f^{n+1
 
 		\subsection{Heston Stochastic Volatility Model}
 
-	In previous sections, we priced american-style put option in the classic Black-Scholes model. Now, we consider the volatility to be stochastic using the Heston model. Let $(S_t)_{t \in [0,T]}$ the asset price and $(Y_t)_{t \in [0,T]}$ its variance process be defined by,
+	In previous sections, we priced american-style put option in the basic Black-Scholes model, with constant volatility. Now, we consider the volatility to be stochastic using the Heston model. Let $(S_t)_{t \in [0,T]}$ the asset price and $(Y_t)_{t \in [0,T]}$ its variance process be defined by,
 \begin{align}
 	\frac{dS_t}{S_t} &= \mu dt + \sqrt{Y_t} dW^1_t, \\
 	\frac{dY_t}{Y_t} &= \alpha (\beta - y) dt + \gamma dW^2_t,
@@ -258,7 +258,7 @@ We refer to \cite{Oosterlee,MR1628686} for the argument leading to (\ref{eq-EDPH
 	u(x, 0, t) &= (E-x)^+ e^{-r(T-t)}, \quad &\forall x &\geq 0, t \in [0,T], \\	
 \end{aligned}
 \end{equation}
-with Neumann conditions at $S_{max}$ and $X_{max}$,
+and Neumann conditions at $S_{max}$ and $X_{max}$,
 \begin{equation}\label{eq-Heston_Neumann}
 \begin{aligned}
 	\pd{u}{x}(X_{max}, y, t) &= 0, \quad &\forall y &\in [0,Y_{max}], t \in [0,T], \\
@@ -275,9 +275,9 @@ As for the Black-Scholes model, one can derive the formulation for american-styl
 \end{equation}
 with boundary conditions (\ref{eq-Heston_Dirichlet}) and (\ref{eq-Heston_Neumann}).
 
-Let us consider a domain $\Omega = [X_{min}, X_{max}] \times [Y_{min}, Y_{max}]$ and a uniform mesh with $J$ points inside for $x$ and $K$ for $y$. We define $x_j = X_{min} + jh_x$ for $j = 0, \dots, J+1$, where $h_x = \frac{X_{max} - X_{min}}{J+1}$, and likewise $y_k = X_{min} + kh_y$ for $k = 0, \dots, K+1$, where $h_x = \frac{Y_{max} - Y_{min}}{K+1}$. Moreover, $N \geq 1$ the number of time points in $[0,T]$, we define $t_n = n \tau$ for $n = 0, \dots N$, with $\tau = \frac{T}{N}$.
+Let us consider a domain $\Omega = [X_{min}, X_{max}] \times [Y_{min}, Y_{max}]$ and a uniform mesh with $J$ points inside for $x$ and $K$ for $y$. We define $x_j = X_{min} + jh_x$ for $j = 0, \dots, J+1$, where $h_x = \frac{X_{max} - X_{min}}{J+1}$, and likewise $y_k = Y_{min} + kh_y$ for $k = 0, \dots, K+1$, where $h_x = \frac{Y_{max} - Y_{min}}{K+1}$. Moreover, $N \geq 1$ the number of time points in $[0,T]$, we define $t_n = n \tau$ for $n = 0, \dots N$, with $\tau = \frac{T}{N}$.
 
-Denoting $u_{j,k}^n$ an approximation of $u(x_j,y_k,t_n)$, we consider a centered finite difference approximation for the operator $\mathcal{A}u$ 
+Denoting $u_{j,k}^n$ an approximation of $u(x_j,y_k,t_n)$, we consider a centered finite difference approximation for the operator $\mathcal{A}u$,
 \begin{footnotesize}
 \begin{align*}
 	&(\mathcal{A}u)(x_j,y_k,t_n) \simeq \\
@@ -340,14 +340,10 @@ For numerical results, we considered the same parameters as \cite{Oosterlee}, th
 \begin{align}
 	\alpha = 5, \: \beta = 0.16, \: \gamma = 0.9, \: \rho = 0.1, \: \lambda = 0, \: r = 0.1, \: E = 10. \label{eq-Heston_parameters}
 \end{align}
-
-\begin{figure}
-\center
-\caption{American-style Put Option prices in the Heston model with parameters (\ref{eq-Heston_parameters})}
-\includegraphics[width=0.6\textwidth]{img/Heston_price.png}
-\end{figure}
+Prices obtained for different grids are presented in table (\ref{tab-heston_prices}) and a plot for $y=0.0625$ and $y=0.25$ for the finest grid 256 x 256 in figure (\ref{fig-Heston}).
 
 \begin{table}
+\label{tab-heston_prices}
 \centering
 \begin{tabular}{l|ccccc}
 \multicolumn{1}{c}{\textit{y = 0.0625}} &  \multicolumn{5}{c}{Asset price} \\
@@ -361,11 +357,32 @@ Grid & 8 & 9 & 10 & 11 & 12 \\
 \hline
 ref \cite{Oosterlee} & 2.00 & 1.107 & 0.517 & 0.212 & 0.0815 \\
 ref \cite{MR1628686} & 2.00 & 1.108 & 0.520 & 0.214 & 0.0821 \\
-ref  \cite{ClarkeParrot} & 2.00 & 1.108 & 0.532 & 0.226 & 0.0907
+ref  \cite{ClarkeParrot} & 2.00 & 1.108 & 0.532 & 0.226 & 0.0907 \\ 
+\hline
+\multicolumn{6}{c}{} \\
+\multicolumn{1}{c}{\textit{y = 0.25}} &  \multicolumn{5}{c}{Asset price} \\
+Grid & 8 & 9 & 10 & 11 & 12 \\
+\hline
+256 x 32 &  & & & & \\
+256 x 64 & & & & & \\
+256 x 128 & & & & & \\
+256 x 256 & & & & & \\
+256 x 256 (with smaller time step) & & & & & \\
+\hline
+ref \cite{Oosterlee} & 2.079 & 1.334 & 0.797 & 0.449 & 0.243 \\
+ref \cite{MR1628686} & 2.078 & 1.334 & 0.796 & 0.448 & 0.243 \\
+ref  \cite{ClarkeParrot} & 2.073 & 1.329 & 0.799 & 0.454 & 0.250 \\
+\hline
 \end{tabular}
-\caption{American-like put option price with Heston stochastic volatility on different grid sizes at $t=0$ and with parameters (\ref{eq-Heston_parameters})}
+\caption{American-like put option price with Heston stochastic volatility for $y=0.0625$ and $y=0.25$ on different grid sizes at $t=0$ and parameters (\ref{eq-Heston_parameters})}
 \end{table}
 
+\begin{figure}
+\center
+\label{fig-Heston}
+\caption{American-style Put Option prices in the Heston model with parameters (\ref{eq-Heston_parameters})}
+\includegraphics[width=0.6\textwidth]{img/Heston_price.png}
+\end{figure}
 
 
 %%---------------- APPENDIX ----------------%%

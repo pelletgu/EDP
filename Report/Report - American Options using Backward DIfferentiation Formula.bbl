@@ -1,0 +1,31 @@
+\begin{thebibliography}{1}
+
+\bibitem{MR2551155}
+Olivier Bokanowski, Stefania Maroso, and Hasnaa Zidani.
+\newblock Some convergence results for {H}oward's algorithm.
+\newblock {\em SIAM J. Numer. Anal.}, 47(4):3001--3026, 2009.
+
+\bibitem{Boka}
+Debrabant~K. Bokanowski~O.
+\newblock High order finite difference schemes for some obstacle problems.
+\newblock 2016.
+
+\bibitem{ClarkeParrot}
+K.~Parrot N.~Clarke.
+\newblock The multigrid solution of two factor american put options.
+\newblock {\em Oxford Comp. Lab}, 96-16, 1996.
+
+\bibitem{Oosterlee}
+C.~W. Oosterlee.
+\newblock On multigrid for linear complementarity problems with application to
+  {A}merican-style options.
+\newblock {\em Electron. Trans. Numer. Anal.}, 15:165--185 (electronic), 2003.
+\newblock Tenth Copper Mountain Conference on Multigrid Methods (Copper
+  Mountain, CO, 2001).
+
+\bibitem{MR1628686}
+R.~Zvan, P.~A. Forsyth, and K.~R. Vetzal.
+\newblock Penalty methods for {A}merican options with stochastic volatility.
+\newblock {\em J. Comput. Appl. Math.}, 91(2):199--218, 1998.
+
+\end{thebibliography}
